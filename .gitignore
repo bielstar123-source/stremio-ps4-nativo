@@ -1,0 +1,11 @@
+.build/
+dist/
+build-ps4/
+.ps4-deps/
+.ps4-pkgconfig/
+*.pkg
+*.self
+*.oelf
+*.elf
+*.log
+.DS_Store
