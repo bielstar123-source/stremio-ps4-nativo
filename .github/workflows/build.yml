@@ -1,24 +1,24 @@
 name: Build PS4 PKG
 
+# Baixa o codigo do port PS4 (starsitaxyz, GPL-3.0) e compila o .pkg.
+# Para rodar: aba Actions > Build PS4 PKG > Run workflow.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'build.sh'
-      - 'native/**'
-      - '.github/workflows/build.yml'
 
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: starsitaxyz/unofficial-stremio-ps4-port
+          ref: 149970b28c3140d23ea1475e2664ea44ca9f0d81
       - name: Build
         run: bash build.sh
       - name: Upload PKG
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: stremio-ps4
           path: |
@@ -26,4 +26,4 @@ jobs:
             dist/SHA256SUMS
             dist/build.log
             dist/compiler.log
-          if-no-files-found: error
+          if-no-files-found: warn
