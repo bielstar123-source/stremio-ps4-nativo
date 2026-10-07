@@ -14,8 +14,36 @@ jobs:
         with:
           repository: starsitaxyz/unofficial-stremio-ps4-port
           ref: 149970b28c3140d23ea1475e2664ea44ca9f0d81
+
+      # Correcao: o pacote libcurl do PacBrew vem sem libcurl.pc e o
+      # openorbis-pkg-config ignora o atalho local. Grava o arquivo na pasta
+      # pkgconfig do toolchain, onde ele realmente procura.
+      - name: Patch libcurl.pc
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          snippet = r'''
+          if ! openorbis-pkg-config --exists libcurl 2>/dev/null; then
+            _oo="${OO_PS4_TOOLCHAIN:-${OPENORBIS:-/opt/pacbrew/ps4/openorbis}}"
+            if [ -f "$_oo/usr/lib/libcurl.a" ] && [ -f "$_oo/usr/include/curl/curl.h" ]; then
+              sudo mkdir -p "$_oo/usr/lib/pkgconfig"
+              printf '%s\n' "prefix=$_oo/usr" 'exec_prefix=${prefix}' 'libdir=${exec_prefix}/lib' 'includedir=${prefix}/include' '' 'Name: libcurl' 'Description: libcurl for OpenOrbis PS4' 'Version: 7.80.0' 'Libs: -L${libdir} -lcurl -lmbedtls -lmbedx509 -lmbedcrypto -lz -lSceNet' 'Cflags: -I${includedir}' | sudo tee "$_oo/usr/lib/pkgconfig/libcurl.pc" >/dev/null
+              echo "libcurl.pc gravado em $_oo/usr/lib/pkgconfig"
+            fi
+          fi
+          '''.replace("\n          ", "\n")
+          for f, marker in (("native/ps4/doctor.sh", "for pc in sdl2 freetype2"),
+                            ("native/ps4/build.sh", "# Fail before CMake")):
+              p = Path(f)
+              s = p.read_text()
+              assert marker in s, f
+              p.write_text(s.replace(marker, snippet + "\n" + marker, 1))
+              print("patched", f)
+          PY
+
       - name: Build
         run: bash build.sh
+
       - name: Upload PKG
         uses: actions/upload-artifact@v4
         if: always()
